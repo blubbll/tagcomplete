@@ -1,631 +1,654 @@
 /**
-*APACHE 2.0 LICENSE
-*@author: Razak Zakari <razzsense@gmail.com>
+ *APACHE 2.0 LICENSE
+ *@author: Razak Zakari <razzsense@gmail.com>
  */
-(function( $ ){
-
-	/**
-	 * [tagComplete Tag+AutoComplete]
-	 * @param  {[object]} userOpts [user options object]
-	 * @return {[object]}          [plugin instances]
-	 */
-	$.fn.tagComplete = function(userOpts){
-
-		var defaultOpts = {
-
-			//hide 
-			//wether the input should be hidden or not
-			hide: false,
-			
-			//keyLimit
-			//input limit to start the ajax 
-			//request
-			keyLimit: 1,
-			
-			//tokenizer
-			tokenizer: ",",
-
-			//free input,allow use to insert his 
-			//own tag data
-			freeInput : true,
-
-			//free edit
-			//free edit allows the backspace to
-			//edit the tag, this can provide
-			//undesired results ,
-			//also freeInput is required 
-			//for this to work
-			freeEdit : true,
-
-			//autocomplete
-			autocomplete: {
-
-				//Auto complete data
-				data: [],
-
-				//incase of remote , autocomplete
-				//remote options, same as jqery Ajax
-				//options
-				ajaxOpts: {
-					//url: "",
-					method: 'GET',
-					dataType: 'json',
-					data: {}
-				},
-
-				//set remote query parameters 
-				//for ajax only
-				params : function(value){
-					return {q: value,lol: 23};
-				},//end params
+(function ($) {
+
+    /**
+     * [tagComplete Tag+AutoComplete]
+     * @param  {[object]} userOpts [user options object]
+     * @return {[object]}          [plugin instances]
+     */
+    $.fn.tagComplete = function (userOpts) {
+
+        var delay = (function () {
+            var timer = 0;
+            return function (callback, ms) {
+                clearTimeout(window["timer_" + callback]);
+                window["timer_" + callback] = setTimeout(callback, ms);
+            };
+        })();
+
+        var defaultOpts = {
+
+            //hide 
+            //wether the input should be hidden or not
+            hide: false,
+
+            //keyLimit
+            //input limit to start the ajax 
+            //request
+            keyLimit: 1,
 
-				/*
-				*After Ajax request ,proccess
-				*the data so it will be well
-				*formatted for the plugin
-				*the returned data must be in the format
-				*of {key:text} where key is the unique id 
-				 */
-				proccessData: function(data){
-					return data;
-				}
+            //tokenizer
+            tokenizer: ",",
 
-			},//end auto complete
+            //free input,allow use to insert his 
+            //own tag data
+            freeInput: true,
 
-			//triggers when a new tag is added
-			onAdd: function(data){
-				return true;
-			},//end on Add 
+            //free edit
+            //free edit allows the backspace to
+            //edit the tag, this can provide
+            //undesired results ,
+            //also freeInput is required 
+            //for this to work
+            freeEdit: true,
 
-			//ondelete 
-			//triggers when a tag is deleted
-			onDelete: function(data){
-				return true;
-			}//end on delete
+            //autocomplete
+            autocomplete: {
 
-		};//end default objects 
+                //Auto complete data
+                data: [],
 
+                //incase of remote , autocomplete
+                //remote options, same as jqery Ajax
+                //options
+                ajaxOpts: {
+                    //url: "",
+                    method: 'GET',
+                    dataType: 'json',
+                    data: {}
+                },
 
-		//set default options
-		var options = $.extend(true,defaultOpts,userOpts); 
-		
-		//console.log(options);
-		//
-		
-		//keycode 
-		backspaceKey = 8;
+                //set remote query parameters 
+                //for ajax only
+                params: function (value) {
+                    return {
+                        q: value,
+                        lol: 23
+                    };
+                }, //end params
 
-		//enter Key 
-		enterKey = 13;
+                /*
+                 *After Ajax request ,proccess
+                 *the data so it will be well
+                 *formatted for the plugin
+                 *the returned data must be in the format
+                 *of {key:text} where key is the unique id 
+                 */
+                proccessData: function (data) {
+                    return data;
+                }
 
+            }, //end auto complete
 
-	    //destory plugin
-		this.destroy = function(){
-			
-			//console.log(this.destroy);
+            //triggers when a new tag is added
+            onAdd: function (data) {
+                return true;
+            }, //end on Add 
 
-			var instanceId = $(this).data("tagcomplete-id");
+            //ondelete 
+            //triggers when a tag is deleted
+            onDelete: function (data) {
+                return true;
+            } //end on delete
 
-			//console.log(instanceId);
+        }; //end default objects 
 
-			if(!instanceId){
-				return false;
-			}
 
-			var tagCompleteDom = document.getElementById(instanceId);
+        //set default options
+        var options = $.extend(true, defaultOpts, userOpts);
 
-	
-			//remove 
-			$(tagCompleteDom).remove();
+        //console.log(options);
+        //
 
+        //keycode 
+        backspaceKey = 8;
 
-			//show original input
-			//remove the data id 
-			$(this).removeData();
+        //enter Key 
+        enterKey = 13;
 
-			$(this).val("");
 
-			//add new data 
-			refreshDom = new Date().getTime()+Math.random();
+        //destory plugin
+        this.destroy = function () {
 
-			//set refresh string
-			$(this).attr("data-tagcomplete-refresh",refreshDom);
+            //console.log(this.destroy);
 
-			$(this).addClass("tag-complete-dead").removeClass('hide');
-		} //end
+            var instanceId = $(this).data("tagcomplete-id");
 
+            //console.log(instanceId);
 
-		//reinit plugin
-		this.reInit = function(userOptions){
+            if (!instanceId) {
+                return false;
+            }
 
-			//destroy plugin first
-			this.destroy();
+            var tagCompleteDom = document.getElementById(instanceId);
 
-			//if user wishes to change some options
-			//then lets merge option changes
-			if(userOptions){
-				options = $.extend(true,options,userOptions);
-			}//end if 
 
-			//then recreate plugin
-			return $.fn.tagComplete.call(this,options);
+            //remove 
+            $(tagCompleteDom).remove();
 
-			//console.log(options);
-		}//end
 
-		//proccess plugin
-		return this.each(function(instanceNo,userInputDom){
+            //show original input
+            //remove the data id 
+            $(this).removeData();
 
+            $(this).val("");
 
-			//set ajax pool to contain all requests 
-			ajaxPool = [];
+            //add new data 
+            refreshDom = new Date().getTime() + Math.random();
 
-			//lets get the input
-			userInput = self = $(userInputDom);
+            //set refresh string
+            $(this).attr("data-tagcomplete-refresh", refreshDom);
 
-			//hide the input 
-			userInput.addClass('hide');
+            $(this).addClass("tag-complete-dead").removeClass('hide');
+        } //end
 
-			instanceNo = instanceNo+1;
 
-			instanceId = "";
+        //reinit plugin
+        this.reInit = function (userOptions) {
 
-			var instanceId = instanceNo+(new Date()).getTime()+
-								Math.floor(Math.random());
+            //destroy plugin first
+            this.destroy();
 
-			hideClass = (options.hide == true) ? "hide" : "";
+            //if user wishes to change some options
+            //then lets merge option changes
+            if (userOptions) {
+                options = $.extend(true, options, userOptions);
+            } //end if 
 
-			//main container
-			tagCompleteMain = $("<div id='"+instanceId+"' class='tag_complete_main "+hideClass+"'>"+
-									"<div class='tag_complete'>"+
-									"<div class='tags_container'></div>"+
-									"<input type='text' class='tag_input' />"+
-									"</div>"+
-									"<ul class='autocomplete hide'></ul>"+
-									"</div>"
-								);
+            //then recreate plugin
+            return $.fn.tagComplete.call(this, options);
 
-			//set the instance id 
-			userInput.attr("data-tagcomplete-id",instanceId);
+            //console.log(options);
+        } //end
 
-			//insert the tagCompleteMain right after the
-			//user input tag
-			tagCompleteMain.insertAfter(userInput);
+        //proccess plugin
+        return this.each(function (instanceNo, userInputDom) {
 
-			//tagComplete
-			tagComplete = tagCompleteMain.find(".tag_complete");
 
-			//tag Input
-			tagInput = tagComplete.find(".tag_input");
+            //set ajax pool to contain all requests 
+            ajaxPool = [];
 
-			//tags container 
-			tagsContainer = tagComplete.find(".tags_container");
+            //lets get the input
+            userInput = self = $(userInputDom);
 
-			//auto complete 
-			autoComplete = tagCompleteMain.find(".autocomplete");
+            //hide the input 
+            userInput.addClass('hide');
 
-			//domSelectors
-			//register the dom and instance 
-			instanceData = {
-				userInput : userInput,
-				tagCompleteMain: tagCompleteMain,
-				tagComplete: tagComplete,
-				tagsContainer: tagsContainer,
-				tagInput: tagInput,
-				autoComplete: autoComplete,
-				options: options,
-				ajaxPool: ajaxPool
-			};//end dom obj
+            instanceNo = instanceNo + 1;
 
-			this.instance = instanceData;
+            instanceId = "";
 
-			//focus input if the tags_container is clicked
-			tagComplete.on('click',instanceData,function(e){
-				//focus the tagInput
-				e.data.tagInput.focus();
-			});//end if
+            var instanceId = instanceNo + (new Date()).getTime() +
+                Math.floor(Math.random());
 
-			//tag Input on focus , focus tagComplete
-			//container
-			tagInput.on("focus",instanceData,function(e){
-				e.data.tagComplete.addClass("is_focused");
-			})
-			.on("blur",instanceData,function(e){
-				e.data.tagComplete.removeClass("is_focused");
-			});//end tagComplete focus styling
+            hideClass = (options.hide == true) ? "hide" : "";
 
+            //main container
+            tagCompleteMain = $("<div id='" + instanceId + "' class='tag_complete_main " + hideClass + "'>" +
+                "<div class='tag_complete'>" +
+                "<div class='tags_container'></div>" +
+                "<input type='text' class='tag_input' />" +
+                "</div>" +
+                "<ul class='autocomplete hide'></ul>" +
+                "</div>"
+            );
 
-			//if the auto complete child ,li is clicked 
-			//,then we 
-			//add tag 
-			autoComplete.on('click','li',instanceData,function(e){
+            //set the instance id 
+            userInput.attr("data-tagcomplete-id", instanceId);
 
-				//instance
-				inst = e.data;
+            //insert the tagCompleteMain right after the
+            //user input tag
+            tagCompleteMain.insertAfter(userInput);
 
-				//console.log(inst);
+            //tagComplete
+            tagComplete = tagCompleteMain.find(".tag_complete");
 
-				//id
-				var id = $(this).data('id');
+            //tag Input
+            tagInput = tagComplete.find(".tag_input");
 
-				//add tag 
-				$.fn.addTag(id,$(this).text(),inst);
+            //tags container 
+            tagsContainer = tagComplete.find(".tags_container");
 
-				//refresh User input
-				$.fn.refreshUserInput(inst.userInput,inst.tagsContainer,inst.options);
+            //auto complete 
+            autoComplete = tagCompleteMain.find(".autocomplete");
 
-				//empty value 
-				tagInput.val("");
+            //domSelectors
+            //register the dom and instance 
+            instanceData = {
+                userInput: userInput,
+                tagCompleteMain: tagCompleteMain,
+                tagComplete: tagComplete,
+                tagsContainer: tagsContainer,
+                tagInput: tagInput,
+                autoComplete: autoComplete,
+                options: options,
+                ajaxPool: ajaxPool
+            }; //end dom obj
 
-				//stop ajax requests 
-				$.fn.abortAjax(ajaxPool);
+            this.instance = instanceData;
 
-				//clear autocomplete 
-				$.fn.clearAutoComplete(inst.autoComplete);
-			});//end onclick 
+            //focus input if the tags_container is clicked
+            tagComplete.on('click', instanceData, function (e) {
+                //focus the tagInput
+                e.data.tagInput.focus();
+            }); //end if
 
+            //tag Input on focus , focus tagComplete
+            //container
+            tagInput.on("focus", instanceData, function (e) {
+                e.data.tagComplete.addClass("is_focused");
+            })
+                .on("blur", instanceData, function (e) {
+                    e.data.tagComplete.removeClass("is_focused");
+                }); //end tagComplete focus styling
 
-			//if the tag close button is clicked
-			tagsContainer.on("click",".tag .close",instanceData,function(e){
-				
-				//instance data
-				inst = e.data;
 
-				tag = $(this).parent(".tag");
+            //if the auto complete child ,li is clicked 
+            //,then we 
+            //add tag 
+            autoComplete.on('click', 'li', instanceData, function (e) {
 
-				//delete tag
-				$.fn.deleteTag(tag,inst);
-			});//end onTag Close 
+                //instance
+                inst = e.data;
 
+                //console.log(inst);
 
-			//lets listen if enter key is pressed and not empty
-			tagInput.on("keyup",instanceData,function(e){
+                //id
+                var id = $(this).data('id');
 
-				//instance data 
-				instance = e.data;
+                //add tag 
+                $.fn.addTag(id, $(this).text(), inst);
 
-				//deflate the instance data 
-				tagCompleteMain = instance.tagCompleteMain;
-				tagComplete = instance.tagComplete;
-				tagsContainer = instance.tagsContainer;
-				self = tagInput = instance.tagInput;
-				autoComplete = instance.autoComplete;
-				options = instance.options;
-				ajaxPool = instance.ajaxPool;
+                //refresh User input
+                $.fn.refreshUserInput(inst.userInput, inst.tagsContainer, inst.options);
 
-				value = $(this).val();
+                //empty value 
+                tagInput.val("");
 
-				//console.log(value);
+                //stop ajax requests 
+                $.fn.abortAjax(ajaxPool);
 
-				keycode = (e.keyCode ? e.keyCode : e.which);
+                //clear autocomplete 
+                $.fn.clearAutoComplete(inst.autoComplete);
+            }); //end onclick 
 
-				//if the value is empty , set auto complete to 0
-				if(value.length == 0){
-					$.fn.clearAutoComplete(autoComplete);
-				}//end 
-                
-				//if value is empty and the backspace is pressed
-				//lets delete last input and also populate 
-				//the input with it
-				if(value.length == 0 && 
-				   keycode == backspaceKey){
 
-					//get lastTag
-					lastTagNo = tagsContainer.find('.tag').length;
+            //if the tag close button is clicked
+            tagsContainer.on("click", ".tag .close", instanceData, function (e) {
 
-					//if empty abort
-					if(lastTagNo == 0){
-						return false;
-					}//end if 
+                //instance data
+                inst = e.data;
 
-					lastTagInfo = $.fn.getTagInfo(tagsContainer,lastTagNo);
+                tag = $(this).parent(".tag");
 
-					//delete tag
-					$.fn.deleteTag(lastTagInfo.selector,instance);
-					
+                //delete tag
+                $.fn.deleteTag(tag, inst);
+            }); //end onTag Close 
 
-					//if free edit and free input is true
-					//use back key to edit tag data
-					if((options.freeEdit && 
-						options.freeInput) ==true){
-					//update the tags input text to the deleted 
-					//also this will help move the cursor to the end
-					tagInput.focus().val(lastTagInfo.text);
-					
-					}//end if 
 
-					//stop exec
-					return self;
-				}//end if the key is back key 
+            //lets listen if enter key is pressed and not empty
+            tagInput.on("keyup keydown", instanceData, function (e) {
 
+                var delayTime = 500; //ms
+                var that = $(this); //need to proxy because of delay function
 
-				//check if enter is pressed && 
-				//tag is not empty then add tag
-				//if the key too is tokenizer set
-				//create tag
-				else if((keycode == enterKey || e.key == options.tokenizer)
-						&& value.length > 0
-						&& options.freeInput == true){
+                delay(function () {
 
-					//trim last tokenizer 
-					if(value.endsWith(options.tokenizer)){
-						value = value.slice(0,value.lastIndexOf(options.tokenizer));
-					}//end if 
+                    //instance data 
+                    instance = e.data;
 
-					value = $.trim(value);
+                    //deflate the instance data 
+                    tagCompleteMain = instance.tagCompleteMain;
+                    tagComplete = instance.tagComplete;
+                    tagsContainer = instance.tagsContainer;
+                    self = tagInput = instance.tagInput;
+                    autoComplete = instance.autoComplete;
+                    options = instance.options;
+                    ajaxPool = instance.ajaxPool;
 
-					if(value.length == 0){
+                    value = $(that).val();
 
-						$(this).val("");
+                    //console.log(value);
 
-						return self;
-					}
+                    keycode = (e.keyCode ? e.keyCode : e.which);
 
-					//add tag 
-					// key, value, instance
-					$.fn.addTag(value,value,instance);
+                    //if the value is empty , set auto complete to 0
+                    if (value.length == 0) {
+                        $.fn.clearAutoComplete(autoComplete);
+                    } //end 
 
-					//empty value 
-					$(this).val("");
+                    //if value is empty and the backspace is pressed
+                    //lets delete last input and also populate 
+                    //the input with it
+                    if (value.length == 0 &&
+                        keycode == backspaceKey) {
 
-					return self;
-				}//end if enter is pressed 
-					
+                        //get lastTag
+                        lastTagNo = tagsContainer.find('.tag').length;
 
-				//user provided autocomplete data
-				autoCompeleteData = options.autocomplete.data;
+                        //if empty abort
+                        if (lastTagNo == 0) {
+                            return false;
+                        } //end if 
 
-				//matched contents
-				matchedData = {};
+                        lastTagInfo = $.fn.getTagInfo(tagsContainer, lastTagNo);
 
-				//if freeinput is enabled
-				if(options.freeInput == true){
-					//always the first data will be the value 
-					matchedData[value] = value;
-				}//end if
+                        //delete tag
+                        $.fn.deleteTag(lastTagInfo.selector, instance);
 
-				//if we are here, then mean auto complete
-				//url or local source is set 
-				//if value limit is less than keyslimit,then
-				//abort
-				if(value.length < options.keyLimit){
-					return self;
-				}//end if value length is less than keyslimit
 
-				//if data is available
-				if(typeof options.autocomplete.data == 'object'){
+                        //if free edit and free input is true
+                        //use back key to edit tag data
+                        if ((options.freeEdit &&
+                            options.freeInput) == true) {
+                            //update the tags input text to the deleted 
+                            //also this will help move the cursor to the end
+                            tagInput.focus().val(lastTagInfo.text);
 
-					//loop the data to get keywords 
-					for(i=0;i<autoCompeleteData.length;i++){
+                        } //end if 
 
-						dataWord = autoCompeleteData[i];
+                        //stop exec
+                        return self;
+                    } //end if the key is back key 
 
-						//if we dont have a match
-						if(dataWord.indexOf(value) == -1){
-							continue;
-						}//end if
 
-						//add to matched dropdown Data
-						//using the word as key prevent 
-						//duplicate values
-						matchedData[dataWord] = dataWord;
+                    //check if enter is pressed && 
+                    //tag is not empty then add tag
+                    //if the key too is tokenizer set
+                    //create tag
+                    else if ((keycode == enterKey || e.key == options.tokenizer) &&
+                        value.length > 0 &&
+                        options.freeInput == true) {
 
-						}//end for loop 
+                        //trim last tokenizer 
+                        if (value.endsWith(options.tokenizer)) {
+                            value = value.slice(0, value.lastIndexOf(options.tokenizer));
+                        } //end if 
 
-						//upldate the drop down first
-						//before the network request
-						$.fn.updateAutoComplete(autoComplete,matchedData);
-					}//end if options.data an array or obj 
+                        value = $.trim(value);
 
-					//dataUrl
-					dataUrl = options.autocomplete.ajaxOpts.url;
+                        if (value.length == 0) {
 
-					//now if we have url set 
-					if(dataUrl != null){
+                            $(that).val("");
 
-						ajaxOpts = options.autocomplete.ajaxOpts;
-						
-						params = options.autocomplete.params.call(null,value);
+                            return self;
+                        }
 
-						//set ajax data 
-						ajaxOpts.data = $.extend(options.data,params);
+                        //add tag 
+                        // key, value, instance
+                        $.fn.addTag(value, value, instance);
 
-						//console.log(ajaxOpts.data);
+                        //empty value 
+                        $(that).val("");
 
-						ajaxReq = $.ajax(ajaxOpts)
-							.done(function(data){
+                        return self;
+                    } //end if enter is pressed 
 
-							//proccess data
-							proccessedData = options.autocomplete.proccessData.call(null,data);
 
-							//if empty we will abort
-							if(proccessedData.length==0){
-								return false;
-							}//end if 
+                    //user provided autocomplete data
+                    autoCompeleteData = options.autocomplete.data;
 
-							//add to the local data
-							$.extend(matchedData,proccessedData);
+                    //matched contents
+                    matchedData = {};
 
-							//update auto complete 
-							$.fn.updateAutoComplete(autoComplete,matchedData);
-						});//end ajaxReq
+                    //if freeinput is enabled
+                    if (options.freeInput == true) {
+                        //always the first data will be the value 
+                        matchedData[value] = value;
+                    } //end if
 
-			
-					}//end if the url is provided 
+                    //if we are here, then mean auto complete
+                    //url or local source is set 
+                    //if value limit is less than keyslimit,then
+                    //abort
+                    if (value.length < options.keyLimit) {
+                        return self;
+                    } //end if value length is less than keyslimit
 
-			});//end onkeyup ...
+                    //if data is available
+                    if (typeof options.autocomplete.data == 'object') {
 
-		});//end on each loop 
-	
+                        //loop the data to get keywords 
+                        for (i = 0; i < autoCompeleteData.length; i++) {
 
-	};//end jq module name 
+                            dataWord = autoCompeleteData[i];
 
+                            //if we dont have a match
+                            if (dataWord.indexOf(value) == -1) {
+                                continue;
+                            } //end if
 
+                            //add to matched dropdown Data
+                            //using the word as key prevent 
+                            //duplicate values
+                            matchedData[dataWord] = dataWord;
 
-	/**
-	 * Module Functions 
-	 */
+                        } //end for loop 
 
-	/**
-	 * addTag
-	 */
-	$.fn.addTag = function(tagId,tagText,instance){
+                        //upldate the drop down first
+                        //before the network request
+                        $.fn.updateAutoComplete(autoComplete, matchedData);
+                    } //end if options.data an array or obj 
 
-		closeTag = "<span class='close'></span>";
+                    //dataUrl
+                    dataUrl = options.autocomplete.ajaxOpts.url;
 
-		tag = $("<span data-id='"+tagId+"' class='tag'>"+
-				tagText+closeTag+
-				"</span>");
+                    //now if we have url set 
+                    if (dataUrl != null) {
 
-		//append tag
-		instance.tagsContainer.append(tag);
+                        ajaxOpts = options.autocomplete.ajaxOpts;
 
-		//trigger onAdd 
-		instance.options.onAdd.call(null,{tagId:tagText});
+                        params = options.autocomplete.params.call(null, value);
 
-		//stop ajax requests 
-		$.fn.abortAjax(instance.ajaxPool);
+                        //set ajax data 
+                        ajaxOpts.data = $.extend(options.data, params);
 
-		//clear autocomplete 
-		$.fn.clearAutoComplete(instance.autoComplete);
+                        //console.log(ajaxOpts.data);
 
-		//refresh User input
-		$.fn.refreshUserInput(instance.userInput,
-							  instance.tagsContainer,
-							  instance.options);
-		return true;
-	};//end add Tag
+                        ajaxReq = $.ajax(ajaxOpts)
+                            .done(function (data) {
 
+                                //proccess data
+                                proccessedData = options.autocomplete.proccessData.call(null, data);
 
-	//getTag
-	$.fn.getTagInfo = function(tagsContainer,child){
+                                //if empty we will abort
+                                if (proccessedData.length == 0) {
+                                    return false;
+                                } //end if 
 
-		selector = ".tag:nth-child("+child+")";
+                                //add to the local data
+                                $.extend(matchedData, proccessedData);
 
-		tagDom = tagsContainer.find(selector);
+                                //update auto complete 
+                                $.fn.updateAutoComplete(autoComplete, matchedData);
+                            }); //end ajaxReq
 
-		tagText = tagDom.text();
 
-		tagId = tagDom.data('id');
+                    } //end if the url is provided 
 
-		tagInfo = {
-			id: tagId,
-			text: tagText,
-			selector: tagDom
-		}
+                }, delayTime); //end of delay
 
-		return tagInfo;
-	}//end getTag
+            }); //end onkeyup ...
 
 
-	//update AutoComplete
-	$.fn.updateAutoComplete = function(
-								autoCompleteDom,
-								data){
 
-		var listData = "";
+        }); //end on each loop 
 
-		//lets loop the data 
-		$.each(data,function(id,text){
 
-			//build list
-			listData += "<li data-id='"+id+"'>"+text+"</li>";
-		});//end loop
 
-		//add autocomplete item
-		autoCompleteDom.empty().html(listData).removeClass('hide');
+    }; //end jq module name 
 
-		autoCompleteDom.parent('.tag_complete_main')
-						.find('.tag_complete')
-						.addClass('has_autocomplete');
-	};//end updateAutoComplete
 
-	//clear autoComplete
-	$.fn.clearAutoComplete = function(autoCompleteDom){
 
-		autoCompleteDom.addClass('hide').empty();
+    /**
+     * Module Functions 
+     */
 
-		autoCompleteDom.parent('.tag_complete_main')
-						.find('.tag_complete')
-						.removeClass('has_autocomplete');
-	}//end clear AutoComplete
+    /**
+     * addTag
+     */
+    $.fn.addTag = function (tagId, tagText, instance) {
 
-	//abort ajaxRequest
-	$.fn.abortAjax = function(ajaxPool){
-		
-		if(ajaxPool.length > 0){
-			//stop all ajax pool
-			$.each(ajaxPool,function(id,ajaxReq){
-				ajaxReq.abort();
-			});
-		}//end if ajax pool isnt empty 
+        closeTag = "<span class='close'></span>";
 
-	};//end abort pool
+        tag = $("<span data-id='" + tagId + "' class='tag'>" +
+            tagText + closeTag +
+            "</span>");
 
-	/**
-	 * refreshUserInput
-	 */
-	 $.fn.refreshUserInput = function(
-	 						userInput,
-	 						tagsContainer,
-	 						options
-	 						){
+        //append tag
+        instance.tagsContainer.append(tag);
 
-	 	//get all the tags data , tokenize it
-	 	tokenizer = options.tokenizer;
+        //trigger onAdd 
+        instance.options.onAdd.call(null, {
+            tagId: tagText
+        });
 
-	 	tokenizedData = "";
+        //stop ajax requests 
+        $.fn.abortAjax(instance.ajaxPool);
 
-	 	//get all tags 
-	 	tags = tagsContainer.find(".tag");
+        //clear autocomplete 
+        $.fn.clearAutoComplete(instance.autoComplete);
 
-	 	//if no tag, return false
-	 	if(tags.length == 0){
-	 		return false;
-	 	}//end 
+        //refresh User input
+        $.fn.refreshUserInput(instance.userInput,
+            instance.tagsContainer,
+            instance.options);
+        return true;
+    }; //end add Tag
 
-	 	//loop to get keys 
-	 	$.each(tags,function(key,tagObj){
 
-	 		//lets get the data id 
-	 		tagData = $(this).data("id") || $(this).text();
+    //getTag
+    $.fn.getTagInfo = function (tagsContainer, child) {
 
-	 		tokenizedData += tagData+",";
-	 	});//end loop 
+        selector = ".tag:nth-child(" + child + ")";
 
-	 	//remove trailing ,
-	 	tokenizedData = tokenizedData.slice(0,tokenizedData.lastIndexOf(","));
+        tagDom = tagsContainer.find(selector);
 
-	 	//console.log(tokenizedData);
-	 	userInput.val(tokenizedData);
-	 };//end refresh userInput
+        tagText = tagDom.text();
 
-	 /**
-	  * deleteTag
-	  */
-	 $.fn.deleteTag = function(tag,instance){
+        tagId = tagDom.data('id');
 
-	 	//lets get the tag info 
-	 	var tagId = $(tag).data("id");
-	 	var tagText = $(tag).text();
+        tagInfo = {
+            id: tagId,
+            text: tagText,
+            selector: tagDom
+        }
 
-	 	//delete tag
-	 	tag.remove();
+        return tagInfo;
+    } //end getTag
 
-	 	//call on Delete
-	 	instance.options.onDelete.call(null,{
-	 										id:tagId,
-	 										text:tagText
-	 									});
 
-	 	//refresh User Input 
-		$.fn.refreshUserInput(instance.userInput,instance.tagsContainer,instance.options);
-		
-		return true;
-	 }//end delete 
-	
-	 /**
-	  * End Module Functions 
-	  */
+    //update AutoComplete
+    $.fn.updateAutoComplete = function (
+        autoCompleteDom,
+        data) {
 
-}( jQuery ));
+        var listData = "";
+
+        //lets loop the data 
+        $.each(data, function (id, text) {
+
+            //build list
+            listData += "<li data-id='" + id + "'>" + text + "</li>";
+        }); //end loop
+
+        //add autocomplete item
+        autoCompleteDom.empty().html(listData).removeClass('hide');
+
+        autoCompleteDom.parent('.tag_complete_main')
+            .find('.tag_complete')
+            .addClass('has_autocomplete');
+    }; //end updateAutoComplete
+
+    //clear autoComplete
+    $.fn.clearAutoComplete = function (autoCompleteDom) {
+
+        autoCompleteDom.addClass('hide').empty();
+
+        autoCompleteDom.parent('.tag_complete_main')
+            .find('.tag_complete')
+            .removeClass('has_autocomplete');
+    } //end clear AutoComplete
+
+    //abort ajaxRequest
+    $.fn.abortAjax = function (ajaxPool) {
+
+        if (ajaxPool.length > 0) {
+            //stop all ajax pool
+            $.each(ajaxPool, function (id, ajaxReq) {
+                ajaxReq.abort();
+            });
+        } //end if ajax pool isnt empty 
+
+    }; //end abort pool
+
+    /**
+     * refreshUserInput
+     */
+    $.fn.refreshUserInput = function (
+        userInput,
+        tagsContainer,
+        options
+    ) {
+
+        //get all the tags data , tokenize it
+        tokenizer = options.tokenizer;
+
+        tokenizedData = "";
+
+        //get all tags 
+        tags = tagsContainer.find(".tag");
+
+        //if no tag, return false
+        if (tags.length == 0) {
+            return false;
+        } //end 
+
+        //loop to get keys 
+        $.each(tags, function (key, tagObj) {
+
+            //lets get the data id 
+            tagData = $(this).data("id") || $(this).text();
+
+            tokenizedData += tagData + ",";
+        }); //end loop 
+
+        //remove trailing ,
+        tokenizedData = tokenizedData.slice(0, tokenizedData.lastIndexOf(","));
+
+        //console.log(tokenizedData);
+        userInput.val(tokenizedData);
+    }; //end refresh userInput
+
+    /**
+     * deleteTag
+     */
+    $.fn.deleteTag = function (tag, instance) {
+
+        //lets get the tag info 
+        var tagId = $(tag).data("id");
+        var tagText = $(tag).text();
+
+        //delete tag
+        tag.remove();
+
+        //call on Delete
+        instance.options.onDelete.call(null, {
+            id: tagId,
+            text: tagText
+        });
+
+        //refresh User Input 
+        $.fn.refreshUserInput(instance.userInput, instance.tagsContainer, instance.options);
+
+        return true;
+    } //end delete 
+
+    /**
+     * End Module Functions 
+     */
+
+}(jQuery));
